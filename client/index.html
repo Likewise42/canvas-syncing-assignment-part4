@@ -1,13 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  	<script src="/socket.io/socket.io.js"></script>
     <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
     <script type="text/babel" >
         "use strict";
-    
+        let socket;
+        let canvas;
+        let ctx;
+        let bufferCanvas;
+        let bufferCtx;
+
+        const init = () => {
+            socket = io.connect();
+    		
+    		socket.on('connect', ()=>{
+    			console.log('connected to the server');
+              
+                socket.on('giveSquares',(data)=>{
+                    draw = data.squares;
+                  
+                    drawSquares();
+                });
+              
+                socket.emit('join', {});
+              
+                socket.on('uID',(data)=>{
+                  uID = data.uID;
+                  console.log(uID);
+                });
+              
+              
+                canvas = document.querySelector("#canvas");
+                ctx = canvas.getContext("2d");
+              
+                bufferCanvas = document.createElement("canvas");
+                bufferCanvas.height = 200;
+                bufferCanvas.width = 200;
+                bufferCtx = bufferCanvas.getContext("2d");
+              
+                const xVal = Math.floor(Math.random()*1000);
+              
+                const yVal = Math.floor(Math.random()*1000);
+                
+                ctx.fillRect(xVal,yVal,200,200);
+                bufferCtx.fillRect(0,0,200,200);
+
+                const data = {
+                  x: xVal,
+                  y: yVal,
+                  height: 200,
+                  width: 200,
+                  imgData: bufferCanvas.toDataURL()
+                };
+              
+                socket.emit('draw', data);
+              
+                socket.on('recieveDraw', (data)=>{
+                  handleMessage(data);
+                });
+    		});
+        };
+
+        const handleMessage = (data) => {
+            let image = new Image();
+          
+            image.onload = () => {
+                ctx.save();
+                ctx.globalCompositeOperation = "source-over";
+                ctx.drawImage(image, data.x, data.y, data.width, data.height);
+                ctx.restore();
+            };
+          
+            image.src = data.imgData;
+        };
+        
+        window.onload = init;
     </script>
 </head>
 <body>
-
+    <canvas id="canvas" width="1000px" height="1000px"></canvas>
 </body>
 </html>
